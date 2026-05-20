@@ -19,8 +19,10 @@ builder.Services.AddCors(options =>
               .AllowAnyHeader()
               .AllowCredentials()));
 
-// EF Core InMemory
-builder.Services.AddDbContext<AppDbContext>(opt => opt.UseInMemoryDatabase("userdb"));
+// EF Core MySQL (com.mysql.cj.jdbc.Driver equivalent)
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")!;
+builder.Services.AddDbContext<AppDbContext>(opt =>
+    opt.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString)));
 
 // JWT Authentication
 var jwtSecret = builder.Configuration["Jwt:Secret"]!;
@@ -49,13 +51,17 @@ builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
 
-// Seed InMemory DB
+// Seed DB
 using (var scope = app.Services.CreateScope())
-    scope.ServiceProvider.GetRequiredService<AppDbContext>().Database.EnsureCreated();
+{
+    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    db.Database.EnsureCreated();
+}
 
 app.UseMiddleware<GlobalExceptionMiddleware>();
 app.UseCors();
 app.UseAuthentication();
+app.UseMiddleware<TokenRevocationMiddleware>();
 app.UseAuthorization();
 
 if (app.Environment.IsDevelopment())
