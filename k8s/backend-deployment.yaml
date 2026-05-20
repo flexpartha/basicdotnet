@@ -1,0 +1,48 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: backend
+  template:
+    metadata:
+      labels:
+        app: backend
+    spec:
+      containers:
+        - name: backend
+          image: <parthachakraborty>/backend-dotnet:latest
+          ports:
+            - containerPort: 8080
+          env:
+            - name: ASPNETCORE_ENVIRONMENT
+              value: "Production"
+            - name: Jwt__Secret
+              valueFrom:
+                secretKeyRef:
+                  name: userapi-secrets
+                  key: Jwt__Secret
+            - name: Mail__Username
+              valueFrom:
+                secretKeyRef:
+                  name: userapi-secrets
+                  key: Mail__Username
+            - name: Mail__Password
+              valueFrom:
+                secretKeyRef:
+                  name: userapi-secrets
+                  key: Mail__Password
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend-service
+spec:
+  selector:
+    app: backend
+  ports:
+    - port: 8080
+      targetPort: 8080
